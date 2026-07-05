@@ -10,16 +10,16 @@ GROUP BY 1
 
 -- 2. Find the most common rating for movies and TV shows
 
-select type,rating
-from (
-	select 
+SELECT type,rating
+FROM (
+	SELECT 
 		type,
 		rating,
-		count(*) as rating_count,
-	rank() over(partition by type order by rating_count) as rnk
-	from netflix
-	group by 1,2) as t
-where t.rnk =1	
+		COUNT(*) as rating_count,
+	RANK() OVER(PARTITION BY type ORDER BY rating_count DESC) as rnk
+	FROM netflix
+	GROUP BY 1,2) as t
+WHERE t.rnk =1	
 
 
 -- 3. List all movies released in a specific year (e.g., 2020)
@@ -125,7 +125,7 @@ WHERE director IS NULL
 
 SELECT * FROM netflix
 WHERE 
-	casts LIKE '%Salman Khan%'
+	casts ILIKE '%Salman Khan%'
 	AND 
 	release_year > EXTRACT(YEAR FROM CURRENT_DATE) - 10
 
@@ -138,7 +138,7 @@ SELECT
 	UNNEST(STRING_TO_ARRAY(casts, ',')) as actor,
 	COUNT(*)
 FROM netflix
-WHERE country like '%India%'
+WHERE country ILIKE '%India%'
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
