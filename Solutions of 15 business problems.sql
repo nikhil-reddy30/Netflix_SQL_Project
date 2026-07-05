@@ -10,50 +10,34 @@ GROUP BY 1
 
 -- 2. Find the most common rating for movies and TV shows
 
-WITH RatingCounts AS (
-    SELECT 
-        type,
-        rating,
-        COUNT(*) AS rating_count
-    FROM netflix
-    GROUP BY type, rating
-),
-RankedRatings AS (
-    SELECT 
-        type,
-        rating,
-        rating_count,
-        RANK() OVER (PARTITION BY type ORDER BY rating_count DESC) AS rank
-    FROM RatingCounts
-)
-SELECT 
-    type,
-    rating AS most_frequent_rating
-FROM RankedRatings
-WHERE rank = 1;
+select type,rating
+from (
+	select 
+		type,
+		rating,
+		count(*) as rating_count,
+	rank() over(partition by type order by rating_count) as rnk
+	from netflix
+	group by 1,2) as t
+where t.rnk =1	
 
 
 -- 3. List all movies released in a specific year (e.g., 2020)
 
 SELECT * 
 FROM netflix
-WHERE release_year = 2020
+WHERE type = 'Movie' 
+AND release_year = 2020
 
 
 -- 4. Find the top 5 countries with the most content on Netflix
-
-SELECT * 
-FROM
-(
-	SELECT 
-		-- country,
-		UNNEST(STRING_TO_ARRAY(country, ',')) as country,
-		COUNT(*) as total_content
-	FROM netflix
-	GROUP BY 1
-)as t1
-WHERE country IS NOT NULL
-ORDER BY total_content DESC
+	
+SELECT 
+	UNNEST(STRING_TO_ARRAY(country, ',')) as country,
+	COUNT(*) as total_content
+FROM netflix
+GROUP BY 1
+ORDER BY 2 DESC
 LIMIT 5
 
 
@@ -114,18 +98,14 @@ GROUP BY 1
 
 
 SELECT 
-	country,
-	release_year,
-	COUNT(show_id) as total_release,
+	EXTRACT(YEAR FROM TO_DATE(date_added,'Month DD, YYYY)) AS year,
+	COUNT(*),
 	ROUND(
-		COUNT(show_id)::numeric/
-								(SELECT COUNT(show_id) FROM netflix WHERE country = 'India')::numeric * 100 
-		,2
-		)
-		as avg_release
+	COUNT(*)::numeric/(SELECT COUNT(*) FROM netflix WHERE country = 'India')::numeric * 100,
+	2) AS avg_release
 FROM netflix
 WHERE country = 'India' 
-GROUP BY country, 2
+GROUP BY 1
 ORDER BY avg_release DESC 
 LIMIT 5
 
@@ -158,7 +138,7 @@ SELECT
 	UNNEST(STRING_TO_ARRAY(casts, ',')) as actor,
 	COUNT(*)
 FROM netflix
-WHERE country = 'India'
+WHERE country like '%India%'
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -173,7 +153,6 @@ content as 'Good'. Count how many items fall into each category.
 
 SELECT 
     category,
-	TYPE,
     COUNT(*) AS content_count
 FROM (
     SELECT 
@@ -184,8 +163,7 @@ FROM (
         END AS category
     FROM netflix
 ) AS categorized_content
-GROUP BY 1,2
-ORDER BY 2
+GROUP BY 1
 
 
 
